@@ -1,0 +1,51 @@
+body {
+  background-color: #121212;
+  color: #fff;
+  font-family: sans-serif;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.current-song {
+  text-align: center;
+  padding: 20px;
+  width: 100%;
+  background-color: #282828;
+}
+
+
+.progress-bar {
+  width: 80%;
+  height: 10px;
+  background-color: #444;
+  margin: 10px auto;
+}
+
+.progress {
+  height: 100%;
+  background-color: #1DB954;
+  /* width: ...; */ /* This should be set by JavaScript */
+}
+
+.queue {
+  width: 80%;
+  padding: 20px;
+}
+
+.queue ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.queue li {
+  padding: 8px 0;
+  border-bottom: 1px solid #333;
+}
+
+#album-art {
+  width: 150px;  /* Adjust this value as needed */
+  height: 150px; /* Adjust this value as needed */
+}

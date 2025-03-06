@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Spotify Display</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="current-song">
+    <img id="album-art" src="" alt="Album Art"> </img> 
+    <h1 id="song-title"></h1>
+    <p id="song-artist"></p>
+    <div class="progress-bar">
+      <div class="progress" id="progress"></div>
+    </div>
+    <p id="song-time"></p>
+  </div>
+
+  <div class="queue" id="queue-container">
+    <h2 id="queue-title">Next Up</h2>
+    <ul id="queue-list"></ul>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let progressTimer; // Timer for animation
+    let queueSwapTimer; // Timer for swapping queue/recently played
+
+    socket.on('spotifyData', (spotifyData) => {
+      // Update current song info
+      document.getElementById('song-title').textContent = spotifyData.currentSong.title;
+      document.getElementById('song-artist').textContent = spotifyData.currentSong.artist;
+
+      // Update progress bar and time (initial update)
+      updateProgressBarAndTime(spotifyData.currentSong.progress, spotifyData.currentSong.duration);
+
+      // Start animation timer
+      clearInterval(progressTimer); // Clear previous timer if any
+      progressTimer = setInterval(() => {
+        const [minutes, seconds] = spotifyData.currentSong.progress.split(':').map(Number);
+        const progressMs = (minutes * 60 + seconds) * 1000 + 1000; // Add 1 second
+        const newProgress = formatTime(progressMs);
+        updateProgressBarAndTime(newProgress, spotifyData.currentSong.duration); // Update both
+        spotifyData.currentSong.progress = newProgress; // Update progress for next interval
+      }, 1000); // Update every 1 second
+
+      // Update album art
+      document.getElementById('album-art').src = spotifyData.currentSong.artUrl; 
+
+      // Update queue or recently played
+      updateQueueOrRecentlyPlayed(spotifyData);
+    });
+
+    function updateProgressBarAndTime(progress, duration) {
+      const progressPercent = (() => {
+        const [progressMinutes, progressSeconds] = progress.split(':').map(Number);
+        const [durationMinutes, durationSeconds] = duration.split(':').map(Number);
+        const totalProgressSeconds = progressMinutes * 60 + progressSeconds;
+        const totalDurationSeconds = durationMinutes * 60 + durationSeconds;
+        if (totalDurationSeconds === 0) {
+          return 0;
+        }
+        return (totalProgressSeconds / totalDurationSeconds) * 100;
+      })();
+      document.getElementById('progress').style.width = progressPercent + '%';
+
+      // Update playback time
+      document.getElementById('song-time').textContent = `${progress} / ${duration}`;
+    }
+
+    function formatTime(ms) {
+      const totalSeconds = Math.floor(ms / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+      return `${minutes}:${seconds}`;
+    }
+
+    function updateQueueOrRecentlyPlayed(spotifyData) {
+      const queueList = document.getElementById('queue-list');
+      const queueTitle = document.getElementById('queue-title');
+      queueList.innerHTML = ''; // Clear existing list
+
+      if (queueSwapTimer) {
+        clearTimeout(queueSwapTimer); // Clear existing timer
+      }
+
+      // Determine whether to show queue or recently played
+      const showQueue = Date.now() % 120000 < 90000; // True for 90 seconds, then false for 30
+
+      if (showQueue) {
+        queueTitle.textContent = 'Next Up';
+        spotifyData.queue.forEach(song => {
+          const li = document.createElement('li');
+          li.textContent = `${song.title} - ${song.artist}`;
+          queueList.appendChild(li);
+        });
+      } else {
+        queueTitle.textContent = 'Recently Played';
+        spotifyData.recentlyPlayed.forEach(song => {
+          const li = document.createElement('li');
+          li.textContent = `${song.title} - ${song.artist}`;
+          queueList.appendChild(li);
+        });
+      }
+
+      // Schedule next swap
+      queueSwapTimer = setTimeout(() => {
+        updateQueueOrRecentlyPlayed(spotifyData);
+      }, showQueue ? 30000 : 60000); // Swap after 30 or 60 seconds
+    }
+  </script>
+</body>
+</html>
